@@ -1,0 +1,124 @@
+---
+title: "Activity Monitor Study"
+author: "Russell Husfeld"
+date: "September 11, 2016"
+output: html_document
+---
+
+This is a summary for predicting the manner in which six (6) people performed barbell lifts correctly and incorrectly in five (5) different ways, stored in the classe variable. 
+
+The goal was to use the data from accelerometers on the belt, forearm, arm, and dumbell of the test subjects given in a training data set and a test data set. 
+
+##Data Processing
+First we will import the data and look at the data set for unusual values. 
+
+Notcied there are several variables that are NA and other variables that do not significantly change in the training data set. Since there are 160 variables, we will clean the data and remove variables that 
+
+1. Have significant amount of NA values
+
+2. Have very little variation, use the nearZeroVar function. 
+
+3. Variables that are used for identification such as Time Stamps, ID numbers, etc...
+
+
+```{r}
+#load the training dataset into pml.training
+pml.training <- read.csv("~/pml-training.csv")
+#load the test dataset into pml.testing
+pml.testing <- read.csv("~/pml-testing.csv")
+
+str(pml.training)
+names(pml.training)
+
+head(pml.training[,160])
+
+tail(pml.training[,160])
+
+str(pml.training$classe)
+
+hist(as.integer(pml.training$classe))
+
+dim(pml.training)
+
+dim(pml.testing)
+
+#use the testing data set as a validation since it is only 20 data points veruse 19622 data points. 
+
+library(caret)
+
+#creaet a training set from the training dataset. 
+inTrain <- createDataPartition(y=pml.training$classe, p=0.7, list=FALSE)
+training <- pml.training[inTrain,]; testing <- pml.training[-inTrain,]
+
+dim(training)
+
+summary(training)
+
+#columns with high amount of NA's is max_roll_belt, max_picth_belt, min_roll_belt, min_pitch_belt, amplitude_roll_belt, amplitude_pitch_belt, var_total_accel_belt, avg_roll_belt, stddev_roll_belt, var_roll_belt, avg_pitch_belt, stddev_pitch_belt, var_pitch_belt, avg_yaw_belt,  stddev_yaw_belt,    var_yaw_belt, var_accel_arm, avg_roll_arm, stddev_roll_arm, var_roll_arm, avg_pitch_arm     stddev_pitch_arm, var_pitch_arm, avg_yaw_arm, stddev_yaw_arm, var_yaw_arm, max_roll_arm,max_picth_arm,  max_yaw_arm, min_roll_arm, min_pitch_arm,  min_yaw_arm, amplitude_roll_arm, amplitude_pitch_arm, amplitude_yaw_arm, max_roll_dumbbell, max_picth_dumbbell, min_roll_dumbbell, min_pitch_dumbbell, amplitude_roll_dumbbell,  amplitude_pitch_dumbbell, var_accel_dumbbell, avg_roll_dumbbell, stddev_roll_dumbbell, var_roll_dumbbell, avg_pitch_dumbbell, stddev_pitch_dumbbell, var_pitch_dumbbell, avg_yaw_dumbbell, stddev_yaw_dumbbell, var_yaw_dumbbell, max_roll_forearm, max_picth_forearm, min_roll_forearm,  min_pitch_forearm, amplitude_roll_forearm, amplitude_pitch_forearm, var_accel_forearm,avg_roll_forearm ,stddev_roll_forearm, var_roll_forearm, avg_pitch_forearm, stddev_pitch_forearm, var_pitch_forearm,  avg_yaw_forearm, stddev_yaw_forearm, var_yaw_forearm   
+
+
+
+library(dplyr)
+
+training <- select(training, -c(max_roll_belt, max_picth_belt, min_roll_belt, min_pitch_belt, amplitude_roll_belt, amplitude_pitch_belt, var_total_accel_belt, avg_roll_belt, stddev_roll_belt, var_roll_belt, avg_pitch_belt, stddev_pitch_belt, var_pitch_belt, avg_yaw_belt,  stddev_yaw_belt,    var_yaw_belt, var_accel_arm, avg_roll_arm, stddev_roll_arm, var_roll_arm, avg_pitch_arm, stddev_pitch_arm, var_pitch_arm, avg_yaw_arm, stddev_yaw_arm, var_yaw_arm, max_roll_arm,max_picth_arm,  max_yaw_arm, min_roll_arm, min_pitch_arm,  min_yaw_arm, amplitude_roll_arm, amplitude_pitch_arm, amplitude_yaw_arm, max_roll_dumbbell, max_picth_dumbbell, min_roll_dumbbell, min_pitch_dumbbell, amplitude_roll_dumbbell,  amplitude_pitch_dumbbell, var_accel_dumbbell, avg_roll_dumbbell, stddev_roll_dumbbell, var_roll_dumbbell, avg_pitch_dumbbell, stddev_pitch_dumbbell, var_pitch_dumbbell, avg_yaw_dumbbell, stddev_yaw_dumbbell, var_yaw_dumbbell, max_roll_forearm, max_picth_forearm, min_roll_forearm,  min_pitch_forearm, amplitude_roll_forearm, amplitude_pitch_forearm, var_accel_forearm,avg_roll_forearm ,stddev_roll_forearm, var_roll_forearm, avg_pitch_forearm, stddev_pitch_forearm, var_pitch_forearm,  avg_yaw_forearm, stddev_yaw_forearm, var_yaw_forearm)) 
+
+
+dim(training)
+#remove the first 7 columns that are identifiers and time stamps, etc....don't add value to the model fit process. 
+training <- select(training, 8:93)
+
+dim(training)
+
+nearzero <- nearZeroVar(training, saveMetrics = TRUE)
+
+nearzero
+
+nearzerotrue <- subset(nearzero, nearzero$nzv == TRUE)
+
+#will remove these variables as well since they don't add anything to the model fit. 
+rownames(nearzerotrue)
+
+nearzerotruenames <- (rownames(nearzerotrue))
+training <- select(training, -c(kurtosis_roll_belt, kurtosis_picth_belt, kurtosis_yaw_belt, skewness_roll_belt,skewness_roll_belt.1, skewness_yaw_belt, max_yaw_belt, min_yaw_belt,  amplitude_yaw_belt, kurtosis_roll_arm, kurtosis_picth_arm, kurtosis_yaw_arm, skewness_roll_arm, skewness_pitch_arm, skewness_yaw_arm,  kurtosis_roll_dumbbell, kurtosis_picth_dumbbell, kurtosis_yaw_dumbbell, skewness_roll_dumbbell, skewness_pitch_dumbbell, skewness_yaw_dumbbell,  max_yaw_dumbbell,  min_yaw_dumbbell, amplitude_yaw_dumbbell, kurtosis_roll_forearm,   kurtosis_picth_forearm,  kurtosis_yaw_forearm, skewness_roll_forearm, skewness_pitch_forearm,  skewness_yaw_forearm,  max_yaw_forearm, min_yaw_forearm, amplitude_yaw_forearm ))
+
+dim(training)
+mod1 <- train(classe~., method="rpart", data=training)
+
+print(mod1, digits=3)
+
+print(mod1$finalModel, digits = 3)
+
+plot(mod1$finalModel)
+
+text(mod1$finalModel, pretty = 0)
+
+pred1 <- predict(mod1, newdata = testing)
+
+print(confusionMatrix(pred1, testing$classe), digits = 3)
+
+#accuracy of a standard tree is 50.3%. Next we will look at a random forest method from session 25. 
+
+set.seed(3)
+
+# the processing time is significant for this large training set, so we can cut the data in half for the random forest method and store into training1. 
+
+inTrain1 <- createDataPartition(y=training$classe, p=0.5, list=FALSE)
+training1 <- training[inTrain1,]; training2 <- training[-inTrain1,]
+
+#use the Random Forest from session 25 slide 9.....
+mod2 <- train(classe~., method="rf", data=training1, trControl=trainControl(method="cv"), number=3)
+
+print(mod2, digits=3)
+
+print(mod2$finalModel, digits = 3)
+
+#predict new data from the test data, 20 data points. 
+pred2 <- predict(mod2, newdata = testing)
+
+print(confusionMatrix(pred2, testing$classe), digits = 3)
+
+```
+The test data shows that a Random Forest will have a 98.4% accuracy. This is higher accuracy than the tree method. 
+
+
+
